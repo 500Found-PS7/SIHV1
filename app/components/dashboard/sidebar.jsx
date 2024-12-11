@@ -14,9 +14,11 @@ import {
   Menu,
   ArrowLeftFromLine,
   ArrowRightFromLine,
-  MessageSquare
+  MessageSquare,
+  Power
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import Image from "next/image";
 
 const routes = [
   {
@@ -58,15 +60,25 @@ export function Sidebar({ isSidebarOpen, toggleSidebar }) {
     <div className="flex flex-col h-full bg-[#1C1C1E] text-white">
       {/* Header with Logo and Toggle */}
       <div className="p-6 border-b border-[#2C2C2E] flex items-center justify-between">
-        <Link href="/dashboard">
+        <Link href="/dashboard" className="flex items-center">
           <motion.div
-            className="font-bold bg-gradient-to-r from-blue-500 to-violet-500 bg-clip-text text-transparent"
             animate={{ 
-              width: isSidebarOpen ? "auto" : 28,
-              fontSize: isSidebarOpen ? 24 : 20,
+              width: isSidebarOpen ? "auto" : "40px",
             }}
+            className="overflow-hidden flex items-center gap-3"
           >
-            {isSidebarOpen ? 'ELF.' : 'E'}
+            <Power className="w-10 h-10" />
+            {isSidebarOpen && (
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="font-semibold text-sm text-white leading-tight"
+              >
+                Ministry of Power
+                <div className="text-xs text-zinc-400">Load Forecasting</div>
+              </motion.div>
+            )}
           </motion.div>
         </Link>
 

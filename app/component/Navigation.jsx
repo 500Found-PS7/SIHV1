@@ -17,7 +17,18 @@ export function Navigation() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center">
-            <Image src="/favicon.ico" alt="logo" width={40} height={48} className="filter invert"/>
+            <div className="relative w-60 h-60">
+              <Image 
+                src="/power.png" 
+                alt="Ministry of Power Logo"
+                priority
+                fill
+                className="object-contain"
+              />
+            </div>
+            {/* <span className="ml-3 text-white text-base font-semibold hidden sm:block">
+              Ministry of Power
+            </span> */}
           </div>
           <div className="hidden md:block">
             <div className="ml-10 flex items-baseline space-x-4">

@@ -1,3 +1,4 @@
+
 export const globeConfig = {
   pointSize: 4,
   globeColor: "#062056",
