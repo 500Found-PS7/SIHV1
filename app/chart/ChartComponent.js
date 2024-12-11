@@ -115,30 +115,87 @@ const aggregateData = (data, viewType) => {
   }));
 };
 
+// Generate prediction data for short-term forecast
+const generatePredictionData = (lastDataPoint, hoursAhead = 24) => {
+  const predictions = [];
+  const baseLoad = lastDataPoint.load;
+  const startTime = parseISO(lastDataPoint.timestamp);
+
+  for (let i = 1; i <= hoursAhead * 12; i++) { // 5-minute intervals for 24 hours
+    const currentTime = addMinutes(startTime, i * 5);
+    const hour = currentTime.getHours();
+    
+    // Prediction algorithm with uncertainty
+    let predictedLoad = baseLoad;
+    
+    // Add time-of-day effect
+    if (hour >= 6 && hour < 10) { // Morning ramp
+      predictedLoad *= 1.2;
+    } else if (hour >= 10 && hour < 16) { // Midday solar dip
+      predictedLoad *= 0.85;
+    } else if (hour >= 16 && hour < 20) { // Evening peak
+      predictedLoad *= 1.3;
+    } else { // Night time
+      predictedLoad *= 0.7;
+    }
+
+    // Add some randomness for uncertainty
+    const uncertainty = (Math.random() - 0.5) * 0.1 * predictedLoad;
+    predictedLoad += uncertainty;
+
+    predictions.push({
+      time: format(currentTime, 'HH:mm'),
+      timestamp: currentTime.toISOString(),
+      load: Math.round(predictedLoad),
+      isPrediction: true,
+      uncertainty: Math.abs(uncertainty)
+    });
+  }
+
+  return predictions;
+};
+
 export default function ChartComponent({ 
   startDate, 
   endDate, 
-  viewType = '5min', // '5min', 'weekly', 'monthly'
+  viewType = '5min',
+  chartType,
   onViewChange 
 }) {
   const [data, setData] = useState([]);
+  const [predictionData, setPredictionData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     setIsLoading(true);
     try {
-      const rawData = generate5MinData(startDate, endDate);
-      const processedData = aggregateData(rawData, viewType);
-      setData(processedData);
+      if (chartType === "shortTerm") {
+        // For short-term prediction, generate last 6 hours of historical data
+        const historicalEnd = new Date();
+        const historicalStart = addMinutes(historicalEnd, -360); // 6 hours ago
+        const historicalData = generate5MinData(historicalStart, historicalEnd);
+        
+        // Generate 24 hours of prediction data
+        const predictions = generatePredictionData(historicalData[historicalData.length - 1]);
+        
+        // Combine historical and prediction data
+        setData([...historicalData, ...predictions]);
+      } else {
+        const rawData = generate5MinData(startDate, endDate);
+        const processedData = aggregateData(rawData, viewType);
+        setData(processedData);
+      }
     } catch (error) {
       console.error('Error processing data:', error);
-      // Handle error state here
     } finally {
       setIsLoading(false);
     }
-  }, [startDate, endDate, viewType]);
+  }, [startDate, endDate, viewType, chartType]);
 
   const formatXAxis = (timestamp) => {
+    if (chartType === "shortTerm") {
+      return format(parseISO(timestamp), 'HH:mm');
+    }
     switch(viewType) {
       case '5min':
         return format(parseISO(timestamp), 'HH:mm');
@@ -158,27 +215,29 @@ export default function ChartComponent({
       variants={containerVariants}
       className="space-y-4"
     >
-      {/* View Selection Buttons */}
-      <div className="flex gap-2">
-        <Button
-          onClick={() => onViewChange('5min')}
-          className={`${viewType === '5min' ? 'bg-blue-500' : 'bg-blue-500/20'} hover:bg-blue-500/30 text-white`}
-        >
-          5 Min
-        </Button>
-        <Button
-          onClick={() => onViewChange('weekly')}
-          className={`${viewType === 'weekly' ? 'bg-blue-500' : 'bg-blue-500/20'} hover:bg-blue-500/30 text-white`}
-        >
-          Weekly
-        </Button>
-        <Button
-          onClick={() => onViewChange('monthly')}
-          className={`${viewType === 'monthly' ? 'bg-blue-500' : 'bg-blue-500/20'} hover:bg-blue-500/30 text-white`}
-        >
-          Monthly
-        </Button>
-      </div>
+      {/* View Selection Buttons - Only show if not short term prediction */}
+      {!chartType && (
+        <div className="flex gap-2">
+          <Button
+            onClick={() => onViewChange('5min')}
+            className={`${viewType === '5min' ? 'bg-blue-500' : 'bg-blue-500/20'} hover:bg-blue-500/30 text-white`}
+          >
+            5 Min
+          </Button>
+          <Button
+            onClick={() => onViewChange('weekly')}
+            className={`${viewType === 'weekly' ? 'bg-blue-500' : 'bg-blue-500/20'} hover:bg-blue-500/30 text-white`}
+          >
+            Weekly
+          </Button>
+          <Button
+            onClick={() => onViewChange('monthly')}
+            className={`${viewType === 'monthly' ? 'bg-blue-500' : 'bg-blue-500/20'} hover:bg-blue-500/30 text-white`}
+          >
+            Monthly
+          </Button>
+        </div>
+      )}
 
       {/* Chart */}
       <motion.div 
@@ -219,44 +278,43 @@ export default function ChartComponent({
               strokeDasharray="3 3" 
               label={{ value: "Threshold (15000 MW)", fill: "#ff4d4f", position: "right" }} 
             />
-            {data.map((entry, index) => 
-              entry.isOverload && (
-                <ReferenceArea
-                  key={index}
-                  x1={entry.timestamp}
-                  x2={entry.timestamp}
-                  fill="#ff4d4f"
-                  fillOpacity={0.1}
-                />
-              )
-            )}
+            
+            {/* Historical Data Line */}
             <Line
               type="monotone"
               dataKey="load"
-              stroke="#8884d8"
-              name="Load"
+              stroke={chartType === "shortTerm" ? "#8884d8" : "#8884d8"}
+              name={chartType === "shortTerm" ? "Historical Load" : "Load"}
               strokeWidth={2}
-              dot={(props) => {
-                const { cx, cy, payload } = props;
-                if (payload.isOverload) {
-                  return (
-                    <svg x={cx - 5} y={cy - 5} width={10} height={10}>
-                      <circle cx="5" cy="5" r="4" fill="#ff4d4f" stroke="#fff" />
-                    </svg>
-                  );
-                }
-                return null;
-              }}
+              dot={false}
               activeDot={{ r: 6, strokeWidth: 0 }}
             />
+
+            {/* Solar Line */}
             <Line
               type="monotone"
               dataKey="solar"
-              stroke="#ffc658"
+              stroke="#ffd700"
               name="Solar Generation"
               strokeWidth={2}
               dot={false}
+              activeDot={{ r: 6, strokeWidth: 0 }}
             />
+
+            {/* Prediction Line (only for short-term) */}
+            {chartType === "shortTerm" && (
+              <Line
+                type="monotone"
+                dataKey="load"
+                stroke="#4CAF50"
+                name="Predicted Load"
+                strokeWidth={2}
+                dot={false}
+                activeDot={{ r: 6, strokeWidth: 0 }}
+                strokeDasharray="5 5"
+                connectNulls
+              />
+            )}
           </LineChart>
         </ResponsiveContainer>
       </motion.div>

@@ -6,7 +6,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { format } from "date-fns";
+import { format, isValid } from "date-fns";
 import { cn } from "@/lib/utils";
 import { CalendarIcon, Clock } from "lucide-react";
 
@@ -17,6 +17,42 @@ export function DateTimeRangePicker({
   onEndDateChange,
   className,
 }) {
+  // Helper function to safely format date
+  const formatDateTime = (date) => {
+    try {
+      return isValid(date) ? format(date, "PPP HH:mm") : "";
+    } catch (error) {
+      console.error("Invalid date:", error);
+      return "";
+    }
+  };
+
+  // Helper function to safely format time
+  const formatTime = (date) => {
+    try {
+      return isValid(date) ? format(date, "HH:mm") : "00:00";
+    } catch (error) {
+      console.error("Invalid time:", error);
+      return "00:00";
+    }
+  };
+
+  // Helper function to safely update time
+  const updateTime = (date, timeString) => {
+    try {
+      if (!isValid(date)) {
+        date = new Date();
+      }
+      const [hours, minutes] = timeString.split(":");
+      const newDate = new Date(date);
+      newDate.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
+      return newDate;
+    } catch (error) {
+      console.error("Error updating time:", error);
+      return date;
+    }
+  };
+
   return (
     <div className={cn("grid gap-2", className)}>
       <div className="flex flex-wrap gap-2">
@@ -32,7 +68,7 @@ export function DateTimeRangePicker({
               )}
             >
               <CalendarIcon className="mr-2 h-4 w-4 text-blue-400" />
-              {startDate ? format(startDate, "PPP HH:mm") : <span>Start date and time</span>}
+              {startDate && isValid(startDate) ? formatDateTime(startDate) : <span>Start date and time</span>}
             </Button>
           </PopoverTrigger>
           <PopoverContent 
@@ -44,8 +80,16 @@ export function DateTimeRangePicker({
             </div>
             <Calendar
               mode="single"
-              selected={startDate}
-              onSelect={(date) => onStartDateChange(date)}
+              selected={isValid(startDate) ? startDate : undefined}
+              onSelect={(date) => {
+                if (date) {
+                  const newDate = new Date(date);
+                  if (startDate && isValid(startDate)) {
+                    newDate.setHours(startDate.getHours(), startDate.getMinutes(), 0, 0);
+                  }
+                  onStartDateChange(newDate);
+                }
+              }}
               initialFocus
               className="bg-transparent"
             />
@@ -53,11 +97,9 @@ export function DateTimeRangePicker({
               <label className="block text-sm font-medium text-slate-400 mb-2">Time</label>
               <input
                 type="time"
-                value={format(startDate, "HH:mm")}
+                value={formatTime(startDate)}
                 onChange={(e) => {
-                  const [hours, minutes] = e.target.value.split(":");
-                  const newDate = new Date(startDate);
-                  newDate.setHours(parseInt(hours), parseInt(minutes));
+                  const newDate = updateTime(startDate, e.target.value);
                   onStartDateChange(newDate);
                 }}
                 className="w-full bg-slate-800/50 border border-slate-700/50 rounded-lg p-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50"
@@ -78,7 +120,7 @@ export function DateTimeRangePicker({
               )}
             >
               <CalendarIcon className="mr-2 h-4 w-4 text-purple-400" />
-              {endDate ? format(endDate, "PPP HH:mm") : <span>End date and time</span>}
+              {endDate && isValid(endDate) ? formatDateTime(endDate) : <span>End date and time</span>}
             </Button>
           </PopoverTrigger>
           <PopoverContent 
@@ -90,8 +132,16 @@ export function DateTimeRangePicker({
             </div>
             <Calendar
               mode="single"
-              selected={endDate}
-              onSelect={(date) => onEndDateChange(date)}
+              selected={isValid(endDate) ? endDate : undefined}
+              onSelect={(date) => {
+                if (date) {
+                  const newDate = new Date(date);
+                  if (endDate && isValid(endDate)) {
+                    newDate.setHours(endDate.getHours(), endDate.getMinutes(), 0, 0);
+                  }
+                  onEndDateChange(newDate);
+                }
+              }}
               initialFocus
               className="bg-transparent"
             />
@@ -99,11 +149,9 @@ export function DateTimeRangePicker({
               <label className="block text-sm font-medium text-slate-400 mb-2">Time</label>
               <input
                 type="time"
-                value={format(endDate, "HH:mm")}
+                value={formatTime(endDate)}
                 onChange={(e) => {
-                  const [hours, minutes] = e.target.value.split(":");
-                  const newDate = new Date(endDate);
-                  newDate.setHours(parseInt(hours), parseInt(minutes));
+                  const newDate = updateTime(endDate, e.target.value);
                   onEndDateChange(newDate);
                 }}
                 className="w-full bg-slate-800/50 border border-slate-700/50 rounded-lg p-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50"

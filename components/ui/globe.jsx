@@ -1,12 +1,16 @@
-"use client";;
-import { useEffect, useRef, useState, useCallback, useMemo } from "react";
+"use client";
+
+import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { Color, Scene, Fog, PerspectiveCamera, Vector3 } from "three";
 import ThreeGlobe from "three-globe";
 import { useThree, Canvas, extend } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import countries from "@/data/globe.json";
 
-extend({ ThreeGlobe });
+// Only extend if we're in the browser
+if (typeof window !== 'undefined') {
+  extend({ ThreeGlobe });
+}
 
 const RING_PROPAGATION_SPEED = 3;
 const aspect = 1.2;
@@ -19,8 +23,13 @@ export function Globe({
   data
 }) {
   const [globeData, setGlobeData] = useState(null);
-
+  const [mounted, setMounted] = useState(false);
   const globeRef = useRef(null);
+
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
 
   const defaultProps = useMemo(() => ({
     pointSize: 1,
@@ -159,6 +168,8 @@ export function Globe({
     };
   }, [globeData]);
 
+  if (!mounted) return null;
+
   return (<>
     <threeGlobe ref={globeRef} />
   </>);
@@ -168,20 +179,32 @@ export function WebGLRendererConfig() {
   const { gl, size } = useThree();
 
   useEffect(() => {
-    gl.setPixelRatio(window.devicePixelRatio);
-    gl.setSize(size.width, size.height);
-    gl.setClearColor(0xffaaff, 0);
+    if (typeof window !== 'undefined') {
+      gl.setPixelRatio(window.devicePixelRatio);
+      gl.setSize(size.width, size.height);
+      gl.setClearColor(0xffaaff, 0);
+    }
   }, [gl, size.height, size.width]);
 
   return null;
 }
 
 export function World(props) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
+
+  if (!mounted) return null;
+
   const { globeConfig } = props;
   const scene = new Scene();
   scene.fog = new Fog(0xffffff, 400, 2000);
+
   return (
-    (<Canvas scene={scene} camera={new PerspectiveCamera(50, aspect, 180, 1800)}>
+    <Canvas scene={scene} camera={new PerspectiveCamera(50, aspect, 180, 1800)}>
       <WebGLRendererConfig />
       <ambientLight color={globeConfig.ambientLight} intensity={1.5} />
       <directionalLight
@@ -204,7 +227,7 @@ export function World(props) {
         autoRotate={true}
         minPolarAngle={Math.PI / 3.5}
         maxPolarAngle={Math.PI - Math.PI / 3} />
-    </Canvas>)
+    </Canvas>
   );
 }
 
