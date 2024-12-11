@@ -206,36 +206,6 @@ export default function DashboardPage() {
 
       {/* Overview Section */}
       <div id="overview">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <DashboardCard
-            title="Current Load"
-            value="18.5 MW"
-            icon={Zap}
-            trend="up"
-            trendValue="2.3%"
-          />
-          <DashboardCard
-            title="Peak Load"
-            value="22.1 MW"
-            icon={Activity}
-            trend="down"
-            trendValue="1.5%"
-          />
-          <DashboardCard
-            title="Average Load"
-            value="19.2 MW"
-            icon={BarChart3}
-          />
-          <DashboardCard
-            title="Forecast Accuracy"
-            value="95.8%"
-            icon={Activity}
-            trend="up"
-            trendValue="0.8%"
-          />
-        </div>
-
         {/* Main Chart Section */}
         <Card className="mt-8 p-6 bg-gradient-to-br from-[#1C1C1E] to-[#2C2C2E] border-0">
           <div className="mb-6">
